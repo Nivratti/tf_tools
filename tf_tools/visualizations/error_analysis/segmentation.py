@@ -24,6 +24,11 @@ def display_predictions(model, dataset, num_images=4):
 
         preds = model.predict(images, verbose=1)
 
+        # # for debugging
+        # print("Image dtype and shape:", images[i].dtype, images[i].shape)
+        # print("Mask dtype and shape:", masks[i].dtype, masks[i].shape)
+        # print("Prediction dtype and shape:", preds[i].dtype, preds[i].shape)
+
         # Dynamic dimensions based on content
         columns = 3  # For input image, true mask, and predicted mask
         width_per_column = 5  # Assuming 5 inches is sufficient for each column
