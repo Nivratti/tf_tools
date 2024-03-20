@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name='tf-tools',
+    name='tf_tools',
     version='0.1.0',
     author='Nivratti Boyane',
     author_email='your.email@example.com',
