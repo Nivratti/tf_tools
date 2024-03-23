@@ -97,7 +97,7 @@ class CAM_DynamicShape(Layer):
                  gamma_regularizer=None,
                  gamma_constraint=None,
                  **kwargs):
-        super(CAM, self).__init__(**kwargs)
+        super(CAM_DynamicShape, self).__init__(**kwargs)
         self.gamma_initializer = gamma_initializer
         self.gamma_regularizer = gamma_regularizer
         self.gamma_constraint = gamma_constraint
@@ -116,7 +116,7 @@ class CAM_DynamicShape(Layer):
                                      name='gamma',
                                      regularizer=self.gamma_regularizer,
                                      constraint=self.gamma_constraint)
-        super(CAM, self).build(input_shape)
+        super(CAM_DynamicShape, self).build(input_shape)
 
     def call(self, inputs, **kwargs):
         """
