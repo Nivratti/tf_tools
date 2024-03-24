@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Activation
+from keras.layers import Layer, Activation
 
 
 class CAM(Layer):
@@ -44,6 +44,7 @@ class CAM(Layer):
                                      constraint=self.gamma_constraint)
         super(CAM, self).build(input_shape)
 
+    @tf.function()
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output based on the 
@@ -118,6 +119,7 @@ class CAM_DynamicShape(Layer):
                                      constraint=self.gamma_constraint)
         super(CAM_DynamicShape, self).build(input_shape)
 
+    @tf.function()
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output based on the 
