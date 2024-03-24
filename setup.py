@@ -11,9 +11,6 @@ setup(
     url='https://github.com/Nivratti/tf-tools',
     packages=find_packages(),
     install_requires=[
-        'tensorflow',
-        'matplotlib',
-        'numpy',
     ],
     classifiers=[
         'Programming Language :: Python :: 3',
