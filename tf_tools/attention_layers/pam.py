@@ -2,7 +2,6 @@ import tensorflow as tf
 from keras.layers import Layer, Conv2D, Activation
 
 
-@tf.function
 class PAM(Layer):
     """
     Position Attention Module (PAM) implements a position-based attention mechanism 
@@ -54,7 +53,7 @@ class PAM(Layer):
                                      constraint=self.gamma_constraint)
         super(PAM, self).build(input_shape)
 
-    @tf.function()
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output 
@@ -103,7 +102,6 @@ class PAM(Layer):
         return input_shape
     
 
-@tf.function
 class PAM_DynamicShape(Layer):
     """
     DynamicPAM is an enhanced PAM Module designed to dynamically adapt to varying input shapes.
@@ -144,7 +142,7 @@ class PAM_DynamicShape(Layer):
                                      constraint=self.gamma_constraint)
         super(PAM_DynamicShape, self).build(input_shape)
 
-    @tf.function()
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output 

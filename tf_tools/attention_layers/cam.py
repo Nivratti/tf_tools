@@ -2,7 +2,6 @@ import tensorflow as tf
 from keras.layers import Layer, Activation
 
 
-@tf.function
 class CAM(Layer):
     """
     Channel Attention Module (CAM) implements a channel-wise attention mechanism 
@@ -45,7 +44,7 @@ class CAM(Layer):
                                      constraint=self.gamma_constraint)
         super(CAM, self).build(input_shape)
 
-    @tf.function()
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output based on the 
@@ -89,7 +88,6 @@ class CAM(Layer):
         return input_shape
     
 
-@tf.function
 class CAM_DynamicShape(Layer):
     """
     DynamicCAM is an enhanced Channel Attention Module designed to dynamically adapt to varying input shapes.
@@ -121,7 +119,7 @@ class CAM_DynamicShape(Layer):
                                      constraint=self.gamma_constraint)
         super(CAM_DynamicShape, self).build(input_shape)
 
-    @tf.function()
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output based on the 
