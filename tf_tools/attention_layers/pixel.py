@@ -1,7 +1,7 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D
+from keras.layers import Layer, Conv2D
 
-class PixelAttention2D(tf.keras.layers.Layer):
+class PixelAttention2D(Layer):
     """Implements Pixel Attention ( Hengyuan Zhao et al) for convolutional networks in tensorflow
     Inputs need to be Conv2D feature maps.
     The layer implements the following:

@@ -5,7 +5,7 @@ def find_max_batch_size(model, prepare_dataset_fn, training_tfrecord_filepaths, 
     Finds the maximum batch size that can be processed by a accelerator such as GPU or TPU for a given TensorFlow model by dynamically adjusting the batch size and monitoring for out-of-memory (OOM) errors.
 
     Args:
-        model (tf.keras.Model): The TensorFlow model for which to find the max batch size.
+        model (keras.Model): The TensorFlow model for which to find the max batch size.
         prepare_dataset_fn (Callable): A function that prepares a TensorFlow dataset for training. It should accept file paths to TFRecord files, target image size, batch size, and whether to maintain aspect ratio as inputs, and return a tf.data.Dataset.
         training_tfrecord_filepaths (list of str): List of file paths to the training TFRecord files.
         config (object): A configuration object that must contain `image_height`, `image_width`, `should_maintain_aspect_ratio` attributes to specify the image dimensions and whether to maintain aspect ratio.

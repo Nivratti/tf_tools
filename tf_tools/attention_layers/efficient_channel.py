@@ -1,8 +1,8 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Conv1D
+from keras.layers import Layer, Conv1D
 
 
-class EfficientChannelAttention2D(tf.keras.layers.Layer):
+class EfficientChannelAttention2D(Layer):
     """
     EfficientChannelAttention2D implements an efficient channel attention mechanism for convolutional networks in TensorFlow.
     This layer computes channel-wise attention by applying global average pooling followed by a Conv1D layer to generate attention scores,

@@ -1,8 +1,8 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D
+from keras.layers import Layer, Conv2D
 
 
-class ChannelAttention2D(tf.keras.layers.Layer):
+class ChannelAttention2D(Layer):
     """
     Implements Channel Attention as described by Sanghyun Woo et al. for convolutional networks in TensorFlow.
     This layer enhances Conv2D feature maps by focusing on 'informative' channels through an attention mechanism.
