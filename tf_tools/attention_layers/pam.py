@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Layer, Conv2D, Activation
 
+
+@tf.function
 class PAM(Layer):
     """
     Position Attention Module (PAM) implements a position-based attention mechanism 
@@ -100,6 +102,7 @@ class PAM(Layer):
         return input_shape
     
 
+@tf.function
 class PAM_DynamicShape(Layer):
     """
     DynamicPAM is an enhanced PAM Module designed to dynamically adapt to varying input shapes.

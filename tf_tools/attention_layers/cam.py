@@ -2,6 +2,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Layer, Activation
 
 
+@tf.function
 class CAM(Layer):
     """
     Channel Attention Module (CAM) implements a channel-wise attention mechanism 
@@ -87,6 +88,7 @@ class CAM(Layer):
         return input_shape
     
 
+@tf.function
 class CAM_DynamicShape(Layer):
     """
     DynamicCAM is an enhanced Channel Attention Module designed to dynamically adapt to varying input shapes.
