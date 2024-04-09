@@ -23,3 +23,23 @@ def dice_coefficient(y_true, y_pred, smooth=1e-6):
     # Compute the Dice coefficient
     dice = (2. * intersection + smooth) / (union + smooth)
     return dice
+
+
+class DiceCoefficient(tf.keras.metrics.Metric):
+    """
+    Keras meric
+    """
+    def __init__(self, name='dice_coefficient', smooth=1e-6, **kwargs):
+        """Metric to calculate Dice coefficient."""
+        super(DiceCoefficient, self).__init__(name=name, **kwargs)
+        self.smooth = 1e-6
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        dice = dice_coefficient(y_true, y_pred, self.smooth)
+        self.dice = dice  # Store the current batch's dice score
+
+    def result(self):
+        return self.dice
+
+    def reset_state(self):
+        pass  # State does not accumulate from batch to batch
