@@ -27,7 +27,7 @@ def dice_coefficient(y_true, y_pred, smooth=1e-6):
 
 class DiceCoefficient(tf.keras.metrics.Metric):
     """
-    Keras meric
+    Keras metric to use as class and use keras like methods like update_state
     """
     def __init__(self, name='dice_coefficient', smooth=1e-6, **kwargs):
         """Metric to calculate Dice coefficient."""
