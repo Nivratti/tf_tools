@@ -26,3 +26,24 @@ def iou_coefficient(y_true, y_pred, smooth=1e-6):
     # Compute the IoU coefficient
     iou = (intersection + smooth) / (union + smooth)
     return iou
+
+
+class IoUCoefficient(tf.keras.metrics.Metric):
+    """
+    Keras metric to use as class and use keras like methods like update_state
+    """
+    def __init__(self, name='iou_coefficient', smooth=1e-6, **kwargs):
+        """Metric to calculate IoU coefficient."""
+        super(IoUCoefficient, self).__init__(name=name, **kwargs)
+        self.smooth = 1e-6
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        iou = iou_coefficient(y_true, y_pred, self.smooth)
+        self.iou = iou  # Store the current batch's dice score
+
+    def result(self):
+        return self.iou
+
+    def reset_state(self):
+        pass  # State does not accumulate from batch to batch
+
