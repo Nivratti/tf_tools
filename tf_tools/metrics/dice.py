@@ -26,29 +26,30 @@ def dice_coefficient(y_true, y_pred, smooth=1e-6):
 
 
 class DiceCoefficient(tf.keras.metrics.Metric):
-    """
-    Keras metric to use as class and use keras like methods like update_state
-    """
     def __init__(self, name='dice_coefficient', smooth=1e-6, **kwargs):
-        """Metric to calculate Dice coefficient."""
         super(DiceCoefficient, self).__init__(name=name, **kwargs)
-        self.smooth = 1e-6
+        self.smooth = smooth
+        # Use add_weight to correctly manage the state
+        self.intersect = self.add_weight(name="intersect", initializer="zeros")
+        self.union = self.add_weight(name="union", initializer="zeros")
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        # Ensure both tensors are of the same float32 data type
         y_true_f = tf.cast(tf.reshape(y_true, [-1]), tf.float32)
         y_pred_f = tf.cast(tf.reshape(y_pred, [-1]), tf.float32)
         
-        # Compute the intersection and the sum of the two sets
         intersection = tf.reduce_sum(y_true_f * y_pred_f)
         union = tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f)
         
-        # Compute the Dice coefficient
-        dice = (2. * intersection + self.smooth) / (union + self.smooth)
-        self.dice = dice  # Store the current batch's dice score
+        # Update the state variables in a way that's compatible with TensorFlow's execution
+        self.intersect.assign_add(intersection)
+        self.union.assign_add(union)
 
     def result(self):
-        return self.dice
+        # Compute the Dice coefficient using the state variables
+        dice = (2. * self.intersect + self.smooth) / (self.union + self.smooth)
+        return dice
 
-    def reset_state(self):
-        pass  # State does not accumulate from batch to batch
+    def reset_states(self):
+        # Reset the state of the metric
+        self.intersect.assign(0)
+        self.union.assign(0)
