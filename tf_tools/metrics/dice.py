@@ -35,7 +35,16 @@ class DiceCoefficient(tf.keras.metrics.Metric):
         self.smooth = 1e-6
 
     def update_state(self, y_true, y_pred, sample_weight=None):
-        dice = dice_coefficient(y_true, y_pred, self.smooth)
+        # Ensure both tensors are of the same float32 data type
+        y_true_f = tf.cast(tf.reshape(y_true, [-1]), tf.float32)
+        y_pred_f = tf.cast(tf.reshape(y_pred, [-1]), tf.float32)
+        
+        # Compute the intersection and the sum of the two sets
+        intersection = tf.reduce_sum(y_true_f * y_pred_f)
+        union = tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f)
+        
+        # Compute the Dice coefficient
+        dice = (2. * intersection + self.smooth) / (union + self.smooth)
         self.dice = dice  # Store the current batch's dice score
 
     def result(self):
