@@ -51,7 +51,8 @@ class IoUCoefficient(keras.metrics.Metric):
         self.iou.assign(iou)
 
     def result(self):
-        return self.iou
+        # return self.iou
+        return self.iou + tf.keras.backend.epsilon()
 
     def reset_states(self):
         # Reset the accumulated value.
