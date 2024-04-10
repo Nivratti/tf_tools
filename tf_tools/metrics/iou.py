@@ -58,3 +58,36 @@ class IoUCoefficient(keras.metrics.Metric):
         # Reset the accumulated value.
         self.iou.assign(0.0)
 
+
+class BinaryIoU(tf.keras.metrics.Metric):
+    def __init__(self, target_class_ids=(0, 1), threshold=0.5, name='binary_iou', **kwargs):
+        super(BinaryIoU, self).__init__(name=name, **kwargs)
+        self.target_class_ids = target_class_ids
+        self.threshold = threshold
+        self.true_positives = self.add_weight(name='tp', initializer='zeros')
+        self.false_positives = self.add_weight(name='fp', initializer='zeros')
+        self.false_negatives = self.add_weight(name='fn', initializer='zeros')
+
+    def update_state(self, y_true, y_pred, sample_weight=None):
+        y_pred = tf.math.sigmoid(y_pred)  # Convert logits to probabilities
+        y_pred = tf.cast(y_pred > self.threshold, tf.float32)
+        y_true = tf.cast(y_true, tf.float32)
+
+        for class_id in self.target_class_ids:
+            # Calculate true positives, false positives, and false negatives for each class
+            tp = tf.reduce_sum(tf.cast((y_pred == class_id) & (y_true == class_id), tf.float32))
+            fp = tf.reduce_sum(tf.cast((y_pred == class_id) & (y_true != class_id), tf.float32))
+            fn = tf.reduce_sum(tf.cast((y_pred != class_id) & (y_true == class_id), tf.float32))
+
+            self.true_positives.assign_add(tp)
+            self.false_positives.assign_add(fp)
+            self.false_negatives.assign_add(fn)
+
+    def result(self):
+        iou = self.true_positives / (self.true_positives + self.false_positives + self.false_negatives + 1e-7)
+        return iou
+
+    def reset_states(self):
+        self.true_positives.assign(0)
+        self.false_positives.assign(0)
+        self.false_negatives.assign(0)
