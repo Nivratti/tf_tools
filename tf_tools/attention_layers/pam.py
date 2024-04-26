@@ -53,6 +53,7 @@ class PAM(Layer):
                                      constraint=self.gamma_constraint)
         super(PAM, self).build(input_shape)
 
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output 
@@ -141,6 +142,7 @@ class PAM_DynamicShape(Layer):
                                      constraint=self.gamma_constraint)
         super(PAM_DynamicShape, self).build(input_shape)
 
+    @tf.function
     def call(self, inputs, **kwargs):
         """
         The logic of the layer's forward pass, which computes the output 
