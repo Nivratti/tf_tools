@@ -1,5 +1,6 @@
 import tensorflow as tf
-from tensorflow.keras import layers, backend as K
+from keras import layers
+from tensorflow.keras import backend as K
 
 class PAM(layers.Layer):
     """
@@ -45,6 +46,7 @@ class PAM(layers.Layer):
         self.value_conv.build(input_shape)
         super(PAM, self).build(input_shape)
 
+    @tf.function
     def call(self, inputs):
         # Extract dimensions to handle dynamic shape scenarios
         shape = tf.shape(inputs)
