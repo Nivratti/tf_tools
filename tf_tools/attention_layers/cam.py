@@ -50,6 +50,9 @@ class CAM(layers.Layer):
         else:
             raise ValueError(f"Unsupported activation function '{self.activation_func}'. Choose 'softmax', 'sigmoid', or implement additional activations.")
 
+        # Ensure both tensors are of the same data type before matrix multiplication
+        attention_scores = tf.cast(attention_scores, inputs.dtype)  # Cast attention scores to match input dtype
+
         # Use the attention scores to scale the original feature matrix
         scaled_features = tf.matmul(flattened_features, attention_scores)
         reshaped_features = tf.reshape(scaled_features, (batch_size, height, width, num_filters))
