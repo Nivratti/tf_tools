@@ -1,168 +1,62 @@
+import keras
+from keras import layers
 import tensorflow as tf
-from keras.layers import Layer, Activation
 
-
-class CAM(Layer):
+class CAM(layers.Layer):
     """
-    Channel Attention Module (CAM) implements a channel-wise attention mechanism 
-    to capture inter-dependencies among channels in feature maps from convolutional layers. 
-    This module uses a self-attention mechanism where the attention is computed based on 
-    the channel-wise relationships within the input feature map.
-    
-    Args:
-        gamma_initializer (initializer): Initializer for the gamma weight.
-        gamma_regularizer (regularizer): Regularizer function applied to
-                                          the gamma weight.
-        gamma_constraint (constraint): Constraint function applied to
-                                        the gamma weight.
-        **kwargs: Additional keyword arguments for the Layer superclass.
-    """
+    Channel Attention Module (CAM) enhances specific features across channel dimensions
+    by applying channel-wise attention mechanisms.
 
-    def __init__(self,
-                 gamma_initializer=tf.zeros_initializer(),
-                 gamma_regularizer=None,
-                 gamma_constraint=None,
-                 **kwargs):
+    Attributes:
+        scale_gamma_initializer: Initializer for the scaling factor gamma.
+        scale_gamma_regularizer: Optional regularizer for the gamma weight.
+        scale_gamma_constraint: Optional constraint for the gamma weight.
+        activation_func: Name of the activation function to apply after computing attention scores ('sigmoid', 'softmax', etc.).
+    """
+    def __init__(self, scale_gamma_initializer='zeros', scale_gamma_regularizer=None, scale_gamma_constraint=None, activation_func='sigmoid', **kwargs):
         super(CAM, self).__init__(**kwargs)
-        self.gamma_initializer = gamma_initializer
-        self.gamma_regularizer = gamma_regularizer
-        self.gamma_constraint = gamma_constraint
+        self.scale_gamma_initializer = scale_gamma_initializer
+        self.scale_gamma_regularizer = scale_gamma_regularizer
+        self.scale_gamma_constraint = scale_gamma_constraint
+        self.activation_func = activation_func
 
     def build(self, input_shape):
-        """
-        Build the internal components of the layer based on the input shape.
-        This method initializes the weights of the layer based on the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-        """
-        # Initialize gamma, a trainable weight for the output
-        self.gamma = self.add_weight(shape=(1,),
-                                     initializer=self.gamma_initializer,
-                                     name='gamma',
-                                     regularizer=self.gamma_regularizer,
-                                     constraint=self.gamma_constraint)
+        self.scale_gamma = self.add_weight(
+            shape=(1,),
+            initializer=self.scale_gamma_initializer,
+            name='scale_gamma',
+            regularizer=self.scale_gamma_regularizer,
+            constraint=self.scale_gamma_constraint
+        )
         super(CAM, self).build(input_shape)
 
     @tf.function
-    def call(self, inputs, **kwargs):
-        """
-        The logic of the layer's forward pass, which computes the output based on the 
-        input tensors and the layer's parameters.
-        
-        Args:
-            inputs: Input tensor, the feature map from a convolutional layer.
-            **kwargs: Additional keyword arguments.
-            
-        Returns:
-            Tensor of the same shape as `inputs`, representing the attention-weighted
-            feature map.
-        """
-        # Flatten the spatial dimensions of the input for channel-wise attention
-        vec_a = tf.reshape(inputs, [-1, inputs.shape[1] * inputs.shape[2], inputs.shape[3]])
+    def call(self, inputs):
+        # Extract dynamic dimensions of the input tensor
+        batch_size, height, width, num_filters = tf.shape(inputs)[0], tf.shape(inputs)[1], tf.shape(inputs)[2], tf.shape(inputs)[3]
 
-        # Compute the channel-wise attention map
-        vec_aT = tf.transpose(vec_a, perm=[0, 2, 1])
-        aTa = tf.matmul(vec_aT, vec_a)
-        softmax_aTa = Activation('softmax')(aTa)
+        # Flatten the spatial dimensions and create a matrix of shape (batch_size, height*width, num_filters)
+        flattened_features = tf.reshape(inputs, (batch_size, height * width, num_filters))
+        transposed_features = tf.transpose(flattened_features, perm=[0, 2, 1])
 
-        # Apply the attention map to the input features
-        aaTa = tf.matmul(softmax_aTa, vec_aT)
-        aaTa = tf.transpose(aaTa, perm=[0, 2, 1])
-        aaTa = tf.reshape(aaTa, tf.shape(inputs))
+        # Compute the matrix multiplication between transposed and original feature matrix
+        channel_interaction = tf.matmul(transposed_features, flattened_features)
 
-        # Output is a weighted sum of the input and the attention-weighted feature map
-        out = self.gamma * aaTa + inputs
-        return out
+        # Apply the selected activation function to obtain attention scores
+        if self.activation_func == 'softmax':
+            attention_scores = layers.Softmax(axis=-1)(channel_interaction)
+        elif self.activation_func == 'sigmoid':
+            attention_scores = layers.Activation('sigmoid')(channel_interaction)
+        else:
+            raise ValueError(f"Unsupported activation function '{self.activation_func}'. Choose 'softmax', 'sigmoid', or implement additional activations.")
+
+        # Use the attention scores to scale the original feature matrix
+        scaled_features = tf.matmul(flattened_features, attention_scores)
+        reshaped_features = tf.reshape(scaled_features, (batch_size, height, width, num_filters))
+
+        # Scale the attention-enhanced output by gamma and add back the input
+        output = self.scale_gamma * reshaped_features + inputs
+        return output
 
     def compute_output_shape(self, input_shape):
-        """
-        Computes the output shape of the layer given the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-            
-        Returns:
-            A shape tuple representing the output shape of the layer.
-        """
-        return input_shape
-    
-
-class CAM_DynamicShape(Layer):
-    """
-    DynamicCAM is an enhanced Channel Attention Module designed to dynamically adapt to varying input shapes.
-    If we pass None to model shape and try to build model with this layer it will work fine. 
-    """
-    def __init__(self,
-                 gamma_initializer=tf.zeros_initializer(),
-                 gamma_regularizer=None,
-                 gamma_constraint=None,
-                 **kwargs):
-        super(CAM_DynamicShape, self).__init__(**kwargs)
-        self.gamma_initializer = gamma_initializer
-        self.gamma_regularizer = gamma_regularizer
-        self.gamma_constraint = gamma_constraint
-
-    def build(self, input_shape):
-        """
-        Build the internal components of the layer based on the input shape.
-        This method initializes the weights of the layer based on the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-        """
-        # Initialize gamma, a trainable weight for the output
-        self.gamma = self.add_weight(shape=(1,),
-                                     initializer=self.gamma_initializer,
-                                     name='gamma',
-                                     regularizer=self.gamma_regularizer,
-                                     constraint=self.gamma_constraint)
-        super(CAM_DynamicShape, self).build(input_shape)
-
-    @tf.function
-    def call(self, inputs, **kwargs):
-        """
-        The logic of the layer's forward pass, which computes the output based on the 
-        input tensors and the layer's parameters.
-        
-        Args:
-            inputs: Input tensor, the feature map from a convolutional layer.
-            **kwargs: Additional keyword arguments.
-            
-        Returns:
-            Tensor of the same shape as `inputs`, representing the attention-weighted
-            feature map.
-        """
-        input_shape = tf.shape(inputs)
-        batch_size, height, width, channels = input_shape[0], input_shape[1], input_shape[2], input_shape[3]
-
-        # Reshape inputs dynamically
-        vec_a = tf.reshape(inputs, [batch_size, height * width, channels])
-
-        # Compute the channel-wise attention map
-        vec_aT = tf.transpose(vec_a, perm=[0, 2, 1])
-        aTa = tf.matmul(vec_aT, vec_a)
-        softmax_aTa = Activation('softmax')(aTa)
-
-        # Apply the attention map to the input features
-        aaTa = tf.matmul(softmax_aTa, vec_aT)
-        aaTa = tf.transpose(aaTa, perm=[0, 2, 1])
-        
-        # Reshape back to the original input shape dynamically
-        aaTa = tf.reshape(aaTa, [batch_size, height, width, channels])
-
-        # Output is a weighted sum of the input and the attention-weighted feature map
-        out = self.gamma * aaTa + inputs
-        return out
-
-    def compute_output_shape(self, input_shape):
-        """
-        Computes the output shape of the layer given the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-            
-        Returns:
-            A shape tuple representing the output shape of the layer.
-        """
         return input_shape
