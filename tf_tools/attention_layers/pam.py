@@ -1,195 +1,83 @@
 import tensorflow as tf
-from keras.layers import Layer, Conv2D, Activation
+from tensorflow.keras import layers, backend as K
 
-
-class PAM(Layer):
+class PAM(layers.Layer):
     """
-    Position Attention Module (PAM) implements a position-based attention mechanism 
-    to capture long-range dependencies in feature maps from convolutional layers. 
-    This module uses a self-attention mechanism where the attention is computed 
-    based on the positions of the features in the input feature map.
-    
-    Args:
-        gamma_initializer (initializer): Initializer for the gamma weight.
-        gamma_regularizer (regularizer): Regularizer function applied to
-                                          the gamma weight.
-        gamma_constraint (constraint): Constraint function applied to
-                                        the gamma weight.
-        **kwargs: Additional keyword arguments for the Layer superclass.
-    """
+    Position Attention Module (PAM) as a custom Keras Layer.
 
-    def __init__(self,
-                 gamma_initializer=tf.zeros_initializer(),
-                 gamma_regularizer=None,
-                 gamma_constraint=None,
-                 **kwargs):
+    Captures spatial attention mechanisms within a feature map by projecting the input
+    into different spaces to calculate attention, then scales the input feature map by
+    the attention scores to enhance features with inter-spatial relevance.
+
+    Attributes:
+        scale_gamma_initializer: Initializer for the scaling factor.
+        scale_gamma_regularizer: Regularizer for the scaling factor.
+        scale_gamma_constraint: Constraint for the scaling factor.
+        activation_func: The type of activation function to use ('softmax' or 'sigmoid').
+    """
+    def __init__(self, scale_gamma_initializer='zeros', scale_gamma_regularizer=None, scale_gamma_constraint=None, activation_func='sigmoid', **kwargs):
         super(PAM, self).__init__(**kwargs)
-        self.gamma_initializer = gamma_initializer
-        self.gamma_regularizer = gamma_regularizer
-        self.gamma_constraint = gamma_constraint
-        # Initialize sub-layers without specifying the filter size
-        self.conv_b = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating B feature
-        self.conv_c = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating C feature
-        self.conv_d = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating D feature
+        self.scale_gamma_initializer = scale_gamma_initializer
+        self.scale_gamma_regularizer = scale_gamma_regularizer
+        self.scale_gamma_constraint = scale_gamma_constraint
+        self.activation_func = activation_func
 
     def build(self, input_shape):
-        """
-        Build the internal components of the layer based on the input shape.
-        This method initializes the weights of the layer based on the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-        """
-        filters = input_shape[-1]
-        # Adjust filter sizes based on input shape dynamically
-        self.conv_b.filters = filters // 8
-        self.conv_c.filters = filters // 8
-        self.conv_d.filters = filters
-        # Initialize gamma, a trainable weight for the output
-        self.gamma = self.add_weight(shape=(1,),
-                                     initializer=self.gamma_initializer,
-                                     name='gamma',
-                                     regularizer=self.gamma_regularizer,
-                                     constraint=self.gamma_constraint)
+        if input_shape[-1] is None:
+            raise ValueError("The channel dimension of the inputs should be defined. Found `None`.")
+
+        self.scale_gamma = self.add_weight(
+            name='scale_gamma', 
+            shape=(1,),
+            initializer=self.scale_gamma_initializer,
+            regularizer=self.scale_gamma_regularizer,
+            constraint=self.scale_gamma_constraint
+        )
+
+        num_channels = input_shape[-1]
+        self.query_conv = layers.Conv2D(num_channels // 8, 1, use_bias=False, kernel_initializer='he_normal')
+        self.key_conv = layers.Conv2D(num_channels // 8, 1, use_bias=False, kernel_initializer='he_normal')
+        self.value_conv = layers.Conv2D(num_channels, 1, use_bias=False, kernel_initializer='he_normal')
+
+        # Build the internal Conv2D layers with the correct input shape
+        self.query_conv.build(input_shape)
+        self.key_conv.build(input_shape)
+        self.value_conv.build(input_shape)
         super(PAM, self).build(input_shape)
 
-    @tf.function
-    def call(self, inputs, **kwargs):
-        """
-        The logic of the layer's forward pass, which computes the output 
-        based on the input tensors and the layer's parameters.
+    def call(self, inputs):
+        # Extract dimensions to handle dynamic shape scenarios
+        shape = tf.shape(inputs)
+        batch_size, height, width, num_filters = shape[0], shape[1], shape[2], shape[3]
+
+        # Generate query and key features
+        query_features = self.query_conv(inputs)
+        key_features = self.key_conv(inputs)
+
+        # Prepare for matrix multiplication by reshaping query and key features
+        query_flat = K.reshape(query_features, (batch_size, height * width, num_filters // 8))
+        key_flat_transposed = K.permute_dimensions(K.reshape(key_features, (batch_size, height * width, num_filters // 8)), (0, 2, 1))
+
+        # Compute attention scores using matrix multiplication
+        attention_scores = K.batch_dot(query_flat, key_flat_transposed)
         
-        Args:
-            inputs: Input tensor, the feature map from a convolutional layer.
-            **kwargs: Additional keyword arguments.
-            
-        Returns:
-            Tensor of the same shape as `inputs`, representing the attention-weighted
-            feature map.
-        """
-        # Generate feature maps B, C, and D using convolution
-        b = self.conv_b(inputs)
-        c = self.conv_c(inputs)
-        d = self.conv_d(inputs)
+        # Apply the specified activation function to the attention scores
+        if self.activation_func == 'softmax':
+            attention_scores = layers.Softmax(axis=-1)(attention_scores)
+        elif self.activation_func == 'sigmoid':
+            attention_scores = layers.Activation('sigmoid')(attention_scores)
+        else:
+            raise ValueError(f"Unsupported activation function '{self.activation_func}'. Choose 'softmax' or 'sigmoid'.")
 
-        # Calculate dimensions for reshaping
-        h, w = inputs.shape[1], inputs.shape[2]
-        # Reshape and transpose for matrix multiplication
-        vec_b = tf.reshape(b, [-1, h * w, b.shape[-1]])
-        vec_cT = tf.transpose(tf.reshape(c, [-1, h * w, c.shape[-1]]), perm=[0, 2, 1])
-        # Compute attention map as the dot product of B and C features
-        bcT = tf.matmul(vec_b, vec_cT)
-        softmax_bcT = Activation('softmax')(bcT)
-        # Multiply attention map with D feature and reshape back to original feature map shape
-        vec_d = tf.reshape(d, [-1, h * w, d.shape[-1]])
-        bcTd = tf.matmul(softmax_bcT, vec_d)
-        bcTd = tf.reshape(bcTd, [-1, h, w, d.shape[-1]])
+        # Compute output features by applying the attention scores to the value features
+        value_features = self.value_conv(inputs) # Convolution layer to transform the input for output scaling
+        value_flat = K.reshape(value_features, (batch_size, height * width, num_filters))
+        attended_features = K.batch_dot(attention_scores, value_flat)
+        attended_features_reshaped = K.reshape(attended_features, (batch_size, height, width, num_filters))
 
-        # Output is a weighted sum of the input and the attention-weighted feature map
-        out = self.gamma * bcTd + inputs
-        return out
+        # Scale the output by the learned gamma factor and add the input
+        output = self.scale_gamma * attended_features_reshaped + inputs
+        return output
 
     def compute_output_shape(self, input_shape):
-        """
-        Computes the output shape of the layer given the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-            
-        Returns:
-            A shape tuple representing the output shape of the layer.
-        """
-        return input_shape
-    
-
-class PAM_DynamicShape(Layer):
-    """
-    DynamicPAM is an enhanced PAM Module designed to dynamically adapt to varying input shapes.
-    If we pass None to model shape and try to build model with this layer it will work fine. 
-    """
-    def __init__(self,
-                 gamma_initializer=tf.zeros_initializer(),
-                 gamma_regularizer=None,
-                 gamma_constraint=None,
-                 **kwargs):
-        super(PAM_DynamicShape, self).__init__(**kwargs)
-        self.gamma_initializer = gamma_initializer
-        self.gamma_regularizer = gamma_regularizer
-        self.gamma_constraint = gamma_constraint
-        # Initialize sub-layers without specifying the filter size
-        self.conv_b = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating B feature
-        self.conv_c = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating C feature
-        self.conv_d = Conv2D(1, 1, use_bias=False, kernel_initializer='he_normal')  # For generating D feature
-
-    def build(self, input_shape):
-        """
-        Build the internal components of the layer based on the input shape.
-        This method initializes the weights of the layer based on the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-        """
-        filters = input_shape[-1]
-        # Adjust filter sizes based on input shape dynamically
-        self.conv_b.filters = filters // 8
-        self.conv_c.filters = filters // 8
-        self.conv_d.filters = filters
-        # Initialize gamma, a trainable weight for the output
-        self.gamma = self.add_weight(shape=(1,),
-                                     initializer=self.gamma_initializer,
-                                     name='gamma',
-                                     regularizer=self.gamma_regularizer,
-                                     constraint=self.gamma_constraint)
-        super(PAM_DynamicShape, self).build(input_shape)
-
-    @tf.function
-    def call(self, inputs, **kwargs):
-        """
-        The logic of the layer's forward pass, which computes the output 
-        based on the input tensors and the layer's parameters.
-        
-        Args:
-            inputs: Input tensor, the feature map from a convolutional layer.
-            **kwargs: Additional keyword arguments.
-            
-        Returns:
-            Tensor of the same shape as `inputs`, representing the attention-weighted
-            feature map.
-        """
-        input_shape = tf.shape(inputs)
-        batch_size, h, w, channels = input_shape[0], input_shape[1], input_shape[2], input_shape[3]
-
-        # Generate feature maps B, C, and D using convolution
-        b = self.conv_b(inputs)
-        c = self.conv_c(inputs)
-        d = self.conv_d(inputs)
-
-        # Reshape and transpose for matrix multiplication
-        # Note: Use dynamic shapes for `h` and `w`
-        vec_b = tf.reshape(b, [batch_size, h * w, self.conv_b.filters])
-        vec_cT = tf.transpose(tf.reshape(c, [batch_size, h * w, self.conv_c.filters]), perm=[0, 2, 1])
-
-        # Compute attention map as the dot product of B and C features
-        bcT = tf.matmul(vec_b, vec_cT)
-        softmax_bcT = Activation('softmax')(bcT)
-
-        # Multiply attention map with D feature and reshape back to original feature map shape
-        vec_d = tf.reshape(d, [batch_size, h * w, self.conv_d.filters])
-        bcTd = tf.matmul(softmax_bcT, vec_d)
-        bcTd = tf.reshape(bcTd, [batch_size, h, w, self.conv_d.filters])
-
-        # Output is a weighted sum of the input and the attention-weighted feature map
-        out = self.gamma * bcTd + inputs
-        return out
-
-    def compute_output_shape(self, input_shape):
-        """
-        Computes the output shape of the layer given the input shape.
-        
-        Args:
-            input_shape: Shape tuple of the input feature maps.
-            
-        Returns:
-            A shape tuple representing the output shape of the layer.
-        """
         return input_shape
