@@ -1,5 +1,5 @@
 import tensorflow as tf
-import keras
+from keras.metrics import Metric
 
 def iou_coefficient(y_true, y_pred, smooth=1e-6):
     """
@@ -29,7 +29,7 @@ def iou_coefficient(y_true, y_pred, smooth=1e-6):
     return iou
 
 
-class IoUCoefficient(keras.metrics.Metric):
+class IoUCoefficient(Metric):
     """
     Keras metric to use as class and use keras like methods like update_state
     """
@@ -59,7 +59,7 @@ class IoUCoefficient(keras.metrics.Metric):
         self.iou.assign(0.0)
 
 
-class BinaryIoU(tf.keras.metrics.Metric):
+class BinaryIoU(Metric):
     def __init__(self, target_class_ids=(0, 1), threshold=0.5, name='binary_iou', **kwargs):
         super(BinaryIoU, self).__init__(name=name, **kwargs)
         self.target_class_ids = target_class_ids
