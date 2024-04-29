@@ -1,4 +1,5 @@
 import tensorflow as tf
+from keras.metrics import Metric
 
 def dice_coefficient(y_true, y_pred, smooth=1e-6):
     """
@@ -25,7 +26,7 @@ def dice_coefficient(y_true, y_pred, smooth=1e-6):
     return dice
 
 
-class DiceCoefficient(tf.keras.metrics.Metric):
+class DiceCoefficient(Metric):
     def __init__(self, name='dice_coefficient', smooth=1e-6, **kwargs):
         super(DiceCoefficient, self).__init__(name=name, **kwargs)
         self.smooth = smooth
