@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import tensorflow as tf
 
 def display_predictions(model, dataset, num_images=4, verbose=False):
     """
