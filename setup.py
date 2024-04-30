@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='tf_tools',
-    version='0.1.7',
+    version='0.1.8',
     author='Nivratti Boyane',
     author_email='your.email@example.com',
     description='A set of tools for enhancing TensorFlow 2 projects with custom metrics, loss functions, visualizations, and attention layers.',
