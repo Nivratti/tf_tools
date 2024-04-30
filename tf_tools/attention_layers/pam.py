@@ -1,89 +1,100 @@
 import tensorflow as tf
 from keras import layers
-from tensorflow.keras import backend as K
 
 class PAM(layers.Layer):
     """
-    Position Attention Module (PAM) as a custom Keras Layer.
-
-    Captures spatial attention mechanisms within a feature map by projecting the input
-    into different spaces to calculate attention, then scales the input feature map by
-    the attention scores to enhance features with inter-spatial relevance.
+    Position Attention Module (PAM) enhances feature maps by applying spatial attention.
+    This custom Keras layer uses softmax activation to convert attention scores into
+    a probability distribution, emphasizing the most relevant features.
 
     Attributes:
+        reduction_ratio: Factor to reduce the dimensionality of the query and key features.
+        use_bias: Boolean to enable or disable biases in convolutional layers.
+        kernel_initializer: Initializer for the kernels of the convolutional layers.
         scale_gamma_initializer: Initializer for the scaling factor.
         scale_gamma_regularizer: Regularizer for the scaling factor.
         scale_gamma_constraint: Constraint for the scaling factor.
-        activation_func: The type of activation function to use ('softmax' or 'sigmoid').
     """
-    def __init__(self, scale_gamma_initializer='zeros', scale_gamma_regularizer=None, scale_gamma_constraint=None, activation_func='sigmoid', **kwargs):
+    def __init__(self, reduction_ratio=8, use_bias=False, kernel_initializer='he_normal',
+                 scale_gamma_initializer='zeros', scale_gamma_regularizer=None,
+                 scale_gamma_constraint=None, **kwargs):
         super(PAM, self).__init__(**kwargs)
+        self.reduction_ratio = reduction_ratio
+        self.use_bias = use_bias
+        self.kernel_initializer = kernel_initializer
         self.scale_gamma_initializer = scale_gamma_initializer
         self.scale_gamma_regularizer = scale_gamma_regularizer
         self.scale_gamma_constraint = scale_gamma_constraint
-        self.activation_func = activation_func
 
     def build(self, input_shape):
         if input_shape[-1] is None:
             raise ValueError("The channel dimension of the inputs should be defined. Found `None`.")
 
+        num_channels = input_shape[-1]
+        reduced_channels = num_channels // self.reduction_ratio
+
         self.scale_gamma = self.add_weight(
-            name='scale_gamma', 
+            name='scale_gamma',
             shape=(1,),
             initializer=self.scale_gamma_initializer,
             regularizer=self.scale_gamma_regularizer,
             constraint=self.scale_gamma_constraint
         )
 
-        num_channels = input_shape[-1]
-        self.query_conv = layers.Conv2D(num_channels // 8, 1, use_bias=False, kernel_initializer='he_normal')
-        self.key_conv = layers.Conv2D(num_channels // 8, 1, use_bias=False, kernel_initializer='he_normal')
-        self.value_conv = layers.Conv2D(num_channels, 1, use_bias=False, kernel_initializer='he_normal')
+        # Convolutional layers for feature transformation
+        self.query_conv = layers.Conv2D(reduced_channels, 1, use_bias=self.use_bias,
+                                        kernel_initializer=self.kernel_initializer)
+        self.key_conv = layers.Conv2D(reduced_channels, 1, use_bias=self.use_bias,
+                                      kernel_initializer=self.kernel_initializer)
+        self.value_conv = layers.Conv2D(num_channels, 1, use_bias=self.use_bias,
+                                        kernel_initializer=self.kernel_initializer)
 
         # Build the internal Conv2D layers with the correct input shape
         self.query_conv.build(input_shape)
         self.key_conv.build(input_shape)
         self.value_conv.build(input_shape)
         super(PAM, self).build(input_shape)
-
+        
     @tf.function
     def call(self, inputs):
-        # Extract dimensions to handle dynamic shape scenarios
+        # Extract dimensions for reshaping
         shape = tf.shape(inputs)
         batch_size, height, width, num_filters = shape[0], shape[1], shape[2], shape[3]
 
-        # Generate query and key features
-        query_features = self.query_conv(inputs)
-        key_features = self.key_conv(inputs)
+        # Feature transformation and reshape for attention mechanism
+        query_features = tf.reshape(self.query_conv(inputs), [batch_size, height * width, -1])
+        key_features = tf.transpose(tf.reshape(self.key_conv(inputs), [batch_size, height * width, -1]), perm=[0, 2, 1])
 
-        # Prepare for matrix multiplication by reshaping query and key features
-        query_flat = K.reshape(query_features, (batch_size, height * width, num_filters // 8))
-        key_flat_transposed = K.permute_dimensions(K.reshape(key_features, (batch_size, height * width, num_filters // 8)), (0, 2, 1))
+        # Attention map via softmax on dot product of query and keys
+        attention_scores = tf.nn.softmax(tf.matmul(query_features, key_features), axis=-1)
 
-        # Compute attention scores using matrix multiplication
-        attention_scores = K.batch_dot(query_flat, key_flat_transposed)
-        
-        # Apply the specified activation function to the attention scores
-        if self.activation_func == 'softmax':
-            attention_scores = layers.Softmax(axis=-1)(attention_scores)
-        elif self.activation_func == 'sigmoid':
-            attention_scores = layers.Activation('sigmoid')(attention_scores)
-        else:
-            raise ValueError(f"Unsupported activation function '{self.activation_func}'. Choose 'softmax' or 'sigmoid'.")
+        # Value features and attention application
+        value_features = tf.reshape(self.value_conv(inputs), [batch_size, height * width, -1])
+        attended_features = tf.matmul(attention_scores, value_features)
+        attended_features_reshaped = tf.reshape(attended_features, [batch_size, height, width, num_filters])
 
-        # Compute output features by applying the attention scores to the value features
-        value_features = self.value_conv(inputs) # Convolution layer to transform the input for output scaling
-        value_flat = K.reshape(value_features, (batch_size, height * width, num_filters))
-        attended_features = K.batch_dot(attention_scores, value_flat)
-        attended_features_reshaped = K.reshape(attended_features, (batch_size, height, width, num_filters))
-
-        # Scale the output by the learned gamma factor and add the input
+        # Scale and add the input features
         output = self.scale_gamma * attended_features_reshaped + inputs
         return output
 
     def compute_output_shape(self, input_shape):
         return input_shape
 
+    def get_config(self):
+        config = super(PAM, self).get_config()
+        config.update({
+            'reduction_ratio': self.reduction_ratio,
+            'use_bias': self.use_bias,
+            'kernel_initializer': self.kernel_initializer,
+            'scale_gamma_initializer': self.scale_gamma_initializer,
+            'scale_gamma_regularizer': self.scale_gamma_regularizer,
+            'scale_gamma_constraint': self.scale_gamma_constraint
+        })
+        return config
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 def test_pam_shape(input_shape):
     """
