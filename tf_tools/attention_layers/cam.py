@@ -25,7 +25,8 @@ class CAM(layers.Layer):
             initializer=self.scale_gamma_initializer,
             name='scale_gamma',
             regularizer=self.scale_gamma_regularizer,
-            constraint=self.scale_gamma_constraint
+            constraint=self.scale_gamma_constraint,
+            trainable=True
         )
         super(CAM, self).build(input_shape)
 

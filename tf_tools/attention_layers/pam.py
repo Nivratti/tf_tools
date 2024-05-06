@@ -38,21 +38,28 @@ class PAM(layers.Layer):
             shape=(1,),
             initializer=self.scale_gamma_initializer,
             regularizer=self.scale_gamma_regularizer,
-            constraint=self.scale_gamma_constraint
+            constraint=self.scale_gamma_constraint,
+            trainable=True
         )
 
         # Convolutional layers for feature transformation
-        self.query_conv = layers.Conv2D(reduced_channels, 1, use_bias=self.use_bias,
-                                        kernel_initializer=self.kernel_initializer)
-        self.key_conv = layers.Conv2D(reduced_channels, 1, use_bias=self.use_bias,
-                                      kernel_initializer=self.kernel_initializer)
-        self.value_conv = layers.Conv2D(num_channels, 1, use_bias=self.use_bias,
-                                        kernel_initializer=self.kernel_initializer)
+        self.query_conv = layers.Conv2D(
+            reduced_channels, 1, use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            trainable=True
+        )
+        self.key_conv = layers.Conv2D(
+            reduced_channels, 1, use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            trainable=True
+        )
+        self.value_conv = layers.Conv2D(
+            num_channels, 1, use_bias=self.use_bias,
+            kernel_initializer=self.kernel_initializer,
+            trainable=True,
+        )
 
-        # Build the internal Conv2D layers with the correct input shape
-        self.query_conv.build(input_shape)
-        self.key_conv.build(input_shape)
-        self.value_conv.build(input_shape)
+        # Build the internal layers with the correct input shape
         super(PAM, self).build(input_shape)
         
     @tf.function
