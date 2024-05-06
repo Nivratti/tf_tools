@@ -11,7 +11,7 @@ def display_predictions(model, dataset, num_images=4, verbose=False):
     and the predicted masks side-by-side.
 
     Parameters:
-    - model (tf.keras.Model): The trained model used for making predictions.
+    - model (tf_keras.Model): The trained model used for making predictions.
     - dataset (tf.data.Dataset): A dataset object that yields batches of (images, masks) pairs.
                                 The dataset should provide data in the format that the model expects.
     - num_images (int, optional): The number of images to display from the dataset. Default is 4.
@@ -100,7 +100,7 @@ def display_error_heatmaps(model, dataset, num_images=4):
     between the true masks and predicted masks, highlighting areas of mismatch.
 
     Parameters:
-    - model (tf.keras.Model): The trained model used for generating predictions.
+    - model (tf_keras.Model): The trained model used for generating predictions.
     - dataset (tf.data.Dataset): A dataset object that yields batches of (images, masks) pairs.
                                 Ensure the dataset provides data in the format expected by the model.
     - num_images (int, optional): The number of images to display from the dataset. Default is 4.

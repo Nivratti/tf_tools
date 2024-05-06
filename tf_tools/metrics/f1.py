@@ -1,6 +1,6 @@
 import tensorflow as tf
-from tensorflow.keras.metrics import Metric
-from tensorflow.keras.backend import epsilon
+from tf_keras.metrics import Metric
+from tf_keras.backend import epsilon
 
 class F1Score(Metric):
     def __init__(self, threshold=0.5, name='f1_score', **kwargs):

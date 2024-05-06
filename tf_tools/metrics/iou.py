@@ -1,6 +1,6 @@
 import tensorflow as tf
-from tensorflow.keras.metrics import Metric
-from tensorflow.keras.backend import epsilon
+from tf_keras.metrics import Metric
+from tf_keras.backend import epsilon
 
 def iou_coefficient(y_true, y_pred, smooth=1e-6):
     """

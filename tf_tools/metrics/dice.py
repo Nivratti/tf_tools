@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.metrics import Metric
+from tf_keras.metrics import Metric
 
 def dice_coefficient(y_true, y_pred, smooth=1e-6):
     """

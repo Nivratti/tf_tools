@@ -1,4 +1,4 @@
-from tensorflow.keras.callbacks import Callback
+from tf_keras.callbacks import Callback
 
 class CustomLoggerCallback(Callback):
     """

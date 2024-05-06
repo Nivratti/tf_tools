@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Conv1D
+from tf_keras.layers import Layer, Conv1D
 
 
 class EfficientChannelAttention2D(Layer):

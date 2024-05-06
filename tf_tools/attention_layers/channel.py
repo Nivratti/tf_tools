@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Layer, Conv2D
+from tf_keras.layers import Layer, Conv2D
 
 
 class ChannelAttention2D(Layer):
