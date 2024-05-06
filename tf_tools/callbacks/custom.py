@@ -1,7 +1,6 @@
-import time
-import tensorflow as tf
+from tensorflow.keras.callbacks import Callback
 
-class CustomLoggerCallback(tf.keras.callbacks.Callback):
+class CustomLoggerCallback(Callback):
     """
     Purpose: When running on TPU, observed significantly higher loss values when outputting loss for 
     each batch (using verbose=1 in model.fit). However, at the end of each epoch, the metrics values 

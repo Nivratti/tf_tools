@@ -1,5 +1,6 @@
 import tensorflow as tf
-from keras.metrics import Metric
+from tensorflow.keras.metrics import Metric
+from tensorflow.keras.backend import epsilon
 
 class F1Score(Metric):
     def __init__(self, threshold=0.5, name='f1_score', **kwargs):
@@ -40,9 +41,9 @@ class F1Score(Metric):
 
     def result(self):
         """Calculates and returns the F1 score."""
-        precision = self.true_positives / (self.true_positives + self.false_positives + tf.keras.backend.epsilon())
-        recall = self.true_positives / (self.true_positives + self.false_negatives + tf.keras.backend.epsilon())
-        f1_score = 2 * ((precision * recall) / (precision + recall + tf.keras.backend.epsilon()))
+        precision = self.true_positives / (self.true_positives + self.false_positives + epsilon())
+        recall = self.true_positives / (self.true_positives + self.false_negatives + epsilon())
+        f1_score = 2 * ((precision * recall) / (precision + recall + epsilon()))
         return f1_score
 
     def reset_state(self):

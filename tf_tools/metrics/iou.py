@@ -1,5 +1,6 @@
 import tensorflow as tf
-from keras.metrics import Metric
+from tensorflow.keras.metrics import Metric
+from tensorflow.keras.backend import epsilon
 
 def iou_coefficient(y_true, y_pred, smooth=1e-6):
     """
@@ -52,7 +53,7 @@ class IoUCoefficient(Metric):
 
     def result(self):
         # return self.iou
-        return self.iou + tf.keras.backend.epsilon()
+        return self.iou + epsilon()
 
     def reset_states(self):
         # Reset the accumulated value.

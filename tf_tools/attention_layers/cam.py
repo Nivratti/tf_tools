@@ -1,5 +1,4 @@
-import keras
-from keras import layers
+from tensorflow.keras import layers
 import tensorflow as tf
 
 class CAM(layers.Layer):
@@ -165,9 +164,8 @@ def test_cam_functionality(input_shape):
         return False
 
 if __name__ == "__main__":
-    from keras.models import Model
-    from keras.layers import Input
-    import keras
+    from tensorflow.keras.models import Model
+    from tensorflow.keras.layers import Input
 
     # Define the input tensor
     # input_tensor = Input(shape=(64, 640, 1408))
