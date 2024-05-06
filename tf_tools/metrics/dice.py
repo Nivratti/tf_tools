@@ -50,7 +50,7 @@ class DiceCoefficient(Metric):
         dice = (2. * self.intersect + self.smooth) / (self.union + self.smooth)
         return dice
 
-    def reset_states(self):
+    def reset_state(self):
         # Reset the state of the metric
         self.intersect.assign(0)
         self.union.assign(0)
