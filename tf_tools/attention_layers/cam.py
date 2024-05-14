@@ -1,6 +1,8 @@
 from tf_keras import layers
 import tensorflow as tf
+from tf_keras.utils import register_keras_serializable
 
+@register_keras_serializable(package='Custom', name='CAM')
 class CAM(layers.Layer):
     """
     Channel Attention Module (CAM) enhances specific features across channel dimensions

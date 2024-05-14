@@ -88,7 +88,7 @@ class BinaryIoU(Metric):
         iou = self.true_positives / (self.true_positives + self.false_positives + self.false_negatives + 1e-7)
         return iou
 
-    def reset_states(self):
+    def reset_state(self):
         self.true_positives.assign(0)
         self.false_positives.assign(0)
         self.false_negatives.assign(0)

@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tf_keras import layers
+from tf_keras.utils import register_keras_serializable
 
+@register_keras_serializable(package='Custom', name='PAM')
 class PAM(layers.Layer):
     """
     Position Attention Module (PAM) enhances feature maps by applying spatial attention.
