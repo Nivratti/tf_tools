@@ -84,6 +84,10 @@ class PAM(layers.Layer):
 
         # Scale and add the input features
         output = self.scale_gamma * attended_features_reshaped + inputs
+
+        # Explicitly delete intermediate tensors to release memory
+        del query_features, key_features, attention_scores, value_features, attended_features, attended_features_reshaped
+        
         return output
 
     def compute_output_shape(self, input_shape):
