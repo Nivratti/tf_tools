@@ -4,14 +4,14 @@ from nb_utils.file_dir_handling import list_files
 
 def list_tfrecord_files_in_gcs_directory(gcs_url):
     """
-    Lists all .tfrecord files in a specified GCS directory URL and returns their full URLs.
+    Lists all .tfrec files in a specified GCS directory URL and returns their full URLs.
 
     Args:
-        gcs_url (str): The URL of the GCS directory from which to list .tfrecord files.
+        gcs_url (str): The URL of the GCS directory from which to list .tfrec files.
                        Expected format: 'gs://bucket-name/path/to/directory'
 
     Returns:
-        list[str]: A list of URLs pointing to the .tfrecord files in the specified GCS directory.
+        list[str]: A list of URLs pointing to the .tfrec files in the specified GCS directory.
     """
     from google.cloud import storage
     
@@ -32,8 +32,8 @@ def list_tfrecord_files_in_gcs_directory(gcs_url):
     # Initialize a list to hold the full URLs of the .tfrecord files
     file_urls = []
     for blob in blobs:
-        if blob.name.endswith('.tfrecord'):  # Corrected the file extension check
-            # Construct the full URL for each .tfrecord file
+        if blob.name.endswith('.tfrec'):  # Corrected the file extension check
+            # Construct the full URL for each .tfrec file
             file_url = os.path.join("gs://", bucket.name, blob.name)
             file_urls.append(file_url)
 
