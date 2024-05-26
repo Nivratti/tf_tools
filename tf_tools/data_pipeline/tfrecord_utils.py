@@ -38,7 +38,6 @@ def list_tfrecord_files_in_gcs_directory(gcs_url):
             file_urls.append(file_url)
 
     return file_urls
-import os
 
 def collect_tfrecord_files(paths):
     """
