@@ -2,6 +2,82 @@ import os
 import re
 from nb_utils.file_dir_handling import list_files
 
+def list_tfrecord_files_in_gcs_directory(gcs_url):
+    """
+    Lists all .tfrecord files in a specified GCS directory URL and returns their full URLs.
+
+    Args:
+        gcs_url (str): The URL of the GCS directory from which to list .tfrecord files.
+                       Expected format: 'gs://bucket-name/path/to/directory'
+
+    Returns:
+        list[str]: A list of URLs pointing to the .tfrecord files in the specified GCS directory.
+    """
+    from google.cloud import storage
+    
+    # Split the GCS URL into bucket name and blob prefix, assuming the URL starts with 'gs://'
+    if "gs://" in gcs_url:
+        gcs_url = gcs_url.split("gs://")[1]
+    bucket_name, prefix = gcs_url.split("/", 1)
+
+    # Initialize the Google Cloud Storage client
+    client = storage.Client()
+
+    # Get the bucket object from the bucket name
+    bucket = client.bucket(bucket_name)
+
+    # List all blobs in the specified directory and filter by the suffix '.tfrecord'
+    blobs = client.list_blobs(bucket, prefix=prefix)
+
+    # Initialize a list to hold the full URLs of the .tfrecord files
+    file_urls = []
+    for blob in blobs:
+        if blob.name.endswith('.tfrecord'):  # Corrected the file extension check
+            # Construct the full URL for each .tfrecord file
+            file_url = os.path.join("gs://", bucket.name, blob.name)
+            file_urls.append(file_url)
+
+    return file_urls
+import os
+
+def collect_tfrecord_files(paths):
+    """
+    Collects TFRecord file paths from a given list of paths. Each path can be a directory or a file.
+
+    Iterates over each path provided:
+    - If the path is a direct file with the '.tfrec' extension, it adds it to the list.
+    - If the path is a directory, it searches within for files ending in '.tfrec' and adds them to the list.
+    - If the path is a Google Cloud Storage URL, it invokes a function to list and add all '.tfrec' files from that GCS directory.
+
+    Args:
+        paths (list of str): A list where each element can be a directory, a direct file path, or a GCS URL.
+
+    Returns:
+        list of str: A compiled list of paths to TFRecord files found based on the input criteria.
+
+    Note:
+        The function assumes that files ending in '.tfrec' are TFRecord files.
+        The `list_files` function used to list files within directories should be capable of filtering by extension, specifically for '.tfrec'.
+
+    Example usage:
+        example_paths = ["path/to/directory", "path/to/file.tfrec"]
+        collected_tfrecord_paths = collect_tfrecord_files(example_paths)
+    """
+    collected_file_paths = []
+    for path in paths:
+        if "gs://" in path:
+            # Collect TFRecord files from a GCS directory
+            tfrecord_files = list_tfrecord_files_in_gcs_directory(path)
+            collected_file_paths.extend(tfrecord_files)
+        elif os.path.isfile(path) and path.endswith('.tfrec'):
+            # Directly add the file path if it ends with '.tfrecord'
+            collected_file_paths.append(path)
+        elif os.path.isdir(path):
+            # List and add TFRecord files from the directory
+            tfrecord_files = list_files(path, filter_ext=[".tfrec"])
+            collected_file_paths.extend(tfrecord_files)
+    return collected_file_paths
+
 def collect_tfrecord_files(input_paths):
     """
     Collects TFRecord file paths from a list of input paths.
