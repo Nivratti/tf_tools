@@ -99,3 +99,29 @@ def calculate_total_image_count(tfrecord_files):
             count = int(match.group(1))
             total_count += count
     return total_count
+
+def verify_tfrecord(file_path):
+    """
+    Verifies the integrity of a TFRecord file.
+
+    This function attempts to iterate through all records in the specified
+    TFRecord file to check for any corruption or errors. If the file is valid,
+    it prints a confirmation message. If an error is encountered, it catches
+    the exception and prints an error message.
+
+    Args:
+        file_path (str): The path to the TFRecord file to be verified.
+
+    Raises:
+        Exception: Catches any exception raised during the verification process
+                   and prints an error message with the exception details.
+    Usage:
+        for file in tfrecord_filepaths:
+            verify_tfrecord(file)
+    """
+    try:
+        for record in tf.data.TFRecordDataset(file_path, compression_type="GZIP"):
+            pass
+        print(f"{file_path} is valid.")
+    except Exception as e:
+        print(f"Error in {file_path}: {e}")
