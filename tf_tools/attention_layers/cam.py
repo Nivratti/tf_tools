@@ -54,6 +54,10 @@ class CAM(layers.Layer):
 
         # Scale the attention-enhanced output by gamma and add back the input
         output = self.scale_gamma * reshaped_features + inputs
+
+        # Explicitly delete intermediate tensors to release memory
+        del flattened_features, transposed_features, channel_interaction, attention_scores, scaled_features, reshaped_features
+        
         return output
 
     def compute_output_shape(self, input_shape):
