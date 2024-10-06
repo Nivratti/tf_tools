@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 from nb_utils.file_dir_handling import list_files
 
@@ -41,40 +42,65 @@ def list_tfrecord_files_in_gcs_directory(gcs_url):
 
 def collect_tfrecord_files(paths):
     """
-    Collects TFRecord file paths from a given list of paths. Each path can be a directory or a file.
+    Collects TFRecord file paths from a given list of paths. Each path can be a directory, a file, or a GCS URL.
 
-    Iterates over each path provided:
-    - If the path is a direct file with the '.tfrec' extension, it adds it to the list.
-    - If the path is a directory, it searches within for files ending in '.tfrec' and adds them to the list.
-    - If the path is a Google Cloud Storage URL, it invokes a function to list and add all '.tfrec' files from that GCS directory.
+    Parameters
+    ----------
+    paths : list of str
+        A list where each element can be a directory path, a direct file path, or a Google Cloud Storage (GCS) URL.
 
-    Args:
-        paths (list of str): A list where each element can be a directory, a direct file path, or a GCS URL.
+    Returns
+    -------
+    list of str
+        A compiled list of paths to TFRecord files found based on the input criteria.
 
-    Returns:
-        list of str: A compiled list of paths to TFRecord files found based on the input criteria.
+    Raises
+    ------
+    FileNotFoundError
+        If any of the provided local paths do not exist.
+    ValueError
+        If a path is not a file, directory, or a valid GCS URL.
 
-    Note:
-        The function assumes that files ending in '.tfrec' are TFRecord files.
-        The `list_files` function used to list files within directories should be capable of filtering by extension, specifically for '.tfrec'.
+    Notes
+    -----
+    - The function assumes that files ending with '.tfrec' are TFRecord files.
+    - The `list_files` function used to list files within directories should be capable of filtering by extension, specifically for '.tfrec'.
+    - The existence of GCS paths is assumed to be validated within the `list_tfrecord_files_in_gcs_directory` function.
 
-    Example usage:
-        example_paths = ["path/to/directory", "path/to/file.tfrec"]
-        collected_tfrecord_paths = collect_tfrecord_files(example_paths)
+    Example
+    -------
+    >>> example_paths = ["path/to/directory", "path/to/file.tfrec", "gs://bucket/path/"]
+    >>> collected_tfrecord_paths = collect_tfrecord_files(example_paths)
     """
     collected_file_paths = []
     for path in paths:
-        if "gs://" in path:
+        if path.startswith("gs://"):
             # Collect TFRecord files from a GCS directory
-            tfrecord_files = list_tfrecord_files_in_gcs_directory(path)
-            collected_file_paths.extend(tfrecord_files)
-        elif os.path.isfile(path) and path.endswith('.tfrec'):
-            # Directly add the file path if it ends with '.tfrecord'
-            collected_file_paths.append(path)
+            try:
+                tfrecord_files = list_tfrecord_files_in_gcs_directory(path)
+                collected_file_paths.extend(tfrecord_files)
+            except Exception as e:
+                print(f"Error accessing GCS path '{path}': {e}", file=sys.stderr)
+                sys.exit(1)
+        elif os.path.isfile(path):
+            if path.endswith('.tfrec'):
+                # Directly add the file path if it ends with '.tfrec'
+                collected_file_paths.append(path)
+            else:
+                print(f"File '{path}' does not have a '.tfrec' extension.", file=sys.stderr)
+                sys.exit(1)
         elif os.path.isdir(path):
             # List and add TFRecord files from the directory
-            tfrecord_files = list_files(path, filter_ext=[".tfrec"])
-            collected_file_paths.extend(tfrecord_files)
+            try:
+                tfrecord_files = list_files(path, filter_ext=[".tfrec"])
+                collected_file_paths.extend(tfrecord_files)
+            except Exception as e:
+                print(f"Error accessing directory '{path}': {e}", file=sys.stderr)
+                sys.exit(1)
+        else:
+            # Path does not exist or is not a file/directory/GCS URL
+            print(f"Path '{path}' does not exist or is not a valid file/directory/GCS URL.", file=sys.stderr)
+            sys.exit(1)
     return collected_file_paths
 
 def calculate_total_image_count(tfrecord_files):
