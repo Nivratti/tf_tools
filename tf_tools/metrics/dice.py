@@ -28,29 +28,48 @@ def dice_coefficient(y_true, y_pred, smooth=1e-6):
 
 class DiceCoefficient(Metric):
     def __init__(self, name='dice_coefficient', smooth=1e-6, **kwargs):
+        """
+        Initialize the DiceCoefficient metric.
+
+        Parameters:
+        - name: Name of the metric.
+        - smooth: A small constant to avoid division by zero.
+        """
         super(DiceCoefficient, self).__init__(name=name, **kwargs)
         self.smooth = smooth
-        # Use add_weight to correctly manage the state
-        self.intersect = self.add_weight(name="intersect", initializer="zeros")
-        self.union = self.add_weight(name="union", initializer="zeros")
+        self.intersection = self.add_weight(name='intersection', initializer='zeros')
+        self.union = self.add_weight(name='union', initializer='zeros')
 
     def update_state(self, y_true, y_pred, sample_weight=None):
+        """
+        Update the state of the metric with the current batch.
+
+        Parameters:
+        - y_true: Ground truth tensor.
+        - y_pred: Predicted tensor.
+        - sample_weight: Optional weight for each sample.
+        """
+        # Flatten the tensors to 1D
         y_true_f = tf.cast(tf.reshape(y_true, [-1]), tf.float32)
         y_pred_f = tf.cast(tf.reshape(y_pred, [-1]), tf.float32)
-        
+
+        # Compute intersection and union
         intersection = tf.reduce_sum(y_true_f * y_pred_f)
         union = tf.reduce_sum(y_true_f) + tf.reduce_sum(y_pred_f)
         
-        # Update the state variables in a way that's compatible with TensorFlow's execution
-        self.intersect.assign_add(intersection)
+        # Update the state variables
+        self.intersection.assign_add(intersection)
         self.union.assign_add(union)
 
     def result(self):
-        # Compute the Dice coefficient using the state variables
-        dice = (2. * self.intersect + self.smooth) / (self.union + self.smooth)
-        return dice
+        """
+        Calculate and return the Dice coefficient.
+        """
+        return (2. * self.intersection + self.smooth) / (self.union + self.smooth)
 
-    def reset_state(self):
-        # Reset the state of the metric
-        self.intersect.assign(0)
-        self.union.assign(0)
+    def reset_states(self):
+        """
+        Reset the metric state variables.
+        """
+        self.intersection.assign(0.)
+        self.union.assign(0.)
